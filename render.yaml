@@ -14,8 +14,9 @@ services:
         value: 3.11.9
 
   # React Vite Frontend (Static Site)
-  - type: static
+  - type: web
     name: memory-cliff-frontend
+    runtime: static
     rootDir: frontend
     buildCommand: npm install && npm run build
     staticPublishPath: ./dist
