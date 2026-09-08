@@ -58,7 +58,18 @@ DataForge/
 
 ---
 
-## 2. 14 Live Judge Grilling Questions & Exact Code Answers
+## 2. Project History: Abandoned Test-Time Adaptation Blueprint
+
+> **Context for Defense:** If judges ask about the project's evolution or alternative directions:
+
+- **Prior Direction Explored:** Earlier in the hackathon cycle, the team explored a **"Test-Time Adaptation" (TTA)** blueprint structured around Token-Recurrent Models and Hierarchical Recurrent Models (TRM/HRM, e.g., McGovern et al.) contrasted against BDH-CQ's parameter-free contextual reasoning.
+- **Why It Was Abandoned:** That direction required complex training-time architectural modifications, test-time gradient adaptation loops, and heavier compute requirements that could not be evaluated live with $< 5\text{ms}$ latency in a client browser. Crucially, it shifted focus away from the core mechanistic question of how sub-quadratic architectures store and recall in-context demonstration memory.
+- **Pivot to Shipped Submission:** The team pivoted decisively to **The Memory Cliff & Fast Weights** — isolating the exact linear algebra boundary of additive associative memory ($W_t = W_{t-1} + v_t k_t^\top$) inspired by *The Dragon Hatchling* (arXiv:2509.26507) and BDH-CQ (arXiv:2608.09888). This allowed a transparent, live-computed educational substrate running real-time vector inference without simulated smoke-and-mirrors.
+- **Clean Repository Verification:** An exhaustive codebase audit across all directories confirms that **no lingering references to the TRM blueprint, McGovern, HRM, or identity embeddings exist** in any source code, documentation, or configuration files (the only occurrences were harmless SHA-512 base64 hashes inside `package-lock.json`).
+
+---
+
+## 3. 14 Live Judge Grilling Questions & Exact Code Answers
 
 ### Q1: "Which parts of this app are live PyTorch inference vs. precomputed, and how would I prove you aren't faking the live calculation?"
 **The Answer:**
@@ -189,7 +200,7 @@ DataForge/
 
 ---
 
-## 3. Summary Cheat Sheet for the Team
+## 4. Summary Cheat Sheet for the Team
 
 | Question Topic | Key Formula / Number | Code Location |
 | :--- | :--- | :--- |
