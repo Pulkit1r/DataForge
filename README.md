@@ -94,9 +94,9 @@ To satisfy the **Interactive Substrate & Honesty** criteria:
 
 1. **Yang, Kautz, & Hatamizadeh (2024):** *Gated Delta Networks: Improving Mamba2 with Delta Rule* (arXiv:2412.06464) — Demonstrates associative fixed-state memory collision and the delta-rule correction.
 2. **Arora et al. (2024):** *Simple linear attention language models balance the recall-throughput tradeoff* ("Based", arXiv:2402.18668) — Documents the state-size vs. recall capacity ceiling.
-3. **Variational Linear Attention (2026):** *Variational Linear Attention: Stable Associative Memory for Long-Context Transformers* (arXiv:2605.11196) — Documents the exact collapse curve of linear attention as $N \to d_h$.
-4. **Primary BDH Paper:** *The Dragon Hatchling: The Missing Link between the Transformer and Models of the Brain* (arXiv:2509.26507) — For the biological synaptic framing and additive Hebbian update rule.
-5. **BDH-CQ Technical Report:** For the additive per-demonstration state accumulation property.
+3. **Pandey & Singh (2026):** *Variational Linear Attention: Stable Associative Memory for Long-Context Transformers* (arXiv:2605.11196) — Documents the exact collapse curve of linear attention as $N \to d_h$.
+4. **Kosowski et al. (2025):** *The Dragon Hatchling: The Missing Link between the Transformer and Models of the Brain* (arXiv:2509.26507) — For the biological synaptic framing and additive Hebbian update rule.
+5. **Engdahl et al. (2026):** *BDH-CQ: In-Context Learning with Recurrent Latent Reasoning* (arXiv:2608.09888) — Demonstrates the additive per-demonstration state accumulation property.
 
 ---
 
@@ -160,7 +160,7 @@ AI coding assistants (Google DeepMind / Anthropic LLMs) were utilized during dev
 
 ---
 
-## Known Limitation
+## Known Limitations
 
 - **Hand-Crafted Mathematical Analogue, Not an Official BDH Checkpoint:** The Fixed Memory model is an isolated, hand-crafted mathematical implementation of the additive outer-product Hebbian write rule ($W_t = W_{t-1} + v_t k_t^\top$) inspired by the principles in *The Dragon Hatchling* (arXiv:2509.26507). It does not execute Pathway's official BDH or BDH-CQ pretrained checkpoints, nor does it incorporate BDH's multi-layer spiking integrate-and-fire thresholding or proprietary recurrent latent workspace dynamics.
 - **No Matched-Scale Baseline Against Trained BDH Weights:** No empirical evaluation against trained BDH weights is provided, as official BDH-CQ weights and training pipelines remain proprietary.

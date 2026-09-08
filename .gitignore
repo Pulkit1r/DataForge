@@ -79,3 +79,9 @@ Thumbs.db
 *.fls
 *.synctex.gz
 *.toc
+
+# Test outputs & screenshots
+test_screenshots/
+frontend/test_screenshots/
+test_rubric.cjs
+frontend/test_rubric.cjs
