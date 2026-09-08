@@ -3,6 +3,13 @@
 > **Interactive educational exploration comparing Full (Softmax) Attention vs. Fixed-Size Additive Fast-Weights (Hebbian / BDH Analogue) vs. DeltaNet (Corrective Delta Rule) on associative recall.**  
 > *DataForge 2026 — Pathway Track Submission*
 
+### 🌐 Live Public Artifact & Submission Links
+- **Live Interactive Web Application:** `[Pending Deployment — See Deployment Guide in Section 6]` *(Publicly accessible without login or authentication)*
+- **Concept Summary Briefing (PDF):** [`blog.pdf`](blog.pdf) *(2-page clean briefing with rendered math and verified arXiv citations)*
+- **Oral Defense & Live Grilling Script:** [`DEFENSE.md`](DEFENSE.md)
+- **Third-Party Credits & Provenance:** [`CREDITS.md`](CREDITS.md)
+- **Open Source License:** [MIT License](LICENSE)
+
 ---
 
 ## 1. The Falsifiable Core Claim
@@ -11,6 +18,37 @@
 The interactive dashboard is designed to rigorously test and demonstrate this boundary:
 - When fact load $N \le d$ ($d = 32$), near-orthogonal key vectors allow near-perfect linear readout: $y = W q$.
 - When $N > d$, key vectors inevitably become linearly dependent in $\mathbb{R}^d$, producing cross-talk interference and driving recall accuracy toward zero.
+
+---
+
+## Intended Learner & Prerequisites
+
+This interactive artifact is designed for machine learning students, researchers, and engineers who are familiar with introductory linear algebra (matrix-vector multiplication, dot products, vector orthogonality) and the foundational Transformer self-attention mechanism (Queries, Keys, Values, and explicit Key-Value caches). 
+
+No prior background in sub-quadratic architectures, linear attention variants, State Space Models, or neurobiological Hebbian plasticity is assumed. To reach the core conceptual "aha" in under 5 minutes, the learner only needs to appreciate one fundamental tension: standard attention maintains high recall by paying an unbounded $\mathcal{O}(N)$ memory penalty to store every key-value pair explicitly, whereas recurrent fast-weight models compress memory into a constant $\mathcal{O}(1)$ matrix ($W \leftarrow W + v k^\top$) whose associative capacity is strictly capped by linear independence in $\mathbb{R}^d$.
+
+---
+
+## Learning Objectives
+
+After interacting with this substrate, the learner will be able to:
+- **Predict before execution** whether an associative query at fact load $N$ in a state of dimension $d$ will fall into the high-fidelity linear retrieval regime ($N \le d$) or experience catastrophic key-collision interference ($N > d$).
+- **Calculate the exact memory footprint disparity** between an unbounded KV cache ($2 \cdot N \cdot d$ floats) and a fixed-size associative state ($d^2$ floats) across arbitrary context lengths.
+- **Differentiate the update mechanics** of additive correlation-based updates (Hebbian / BDH analogue: $W_t = W_{t-1} + v_t k_t^\top$) versus subtractive error-correcting updates (DeltaNet: $W_t = W_{t-1} + \beta (v_t - W_{t-1} k_t) k_t^\top$), identifying why error correction dampens collision cross-talk.
+- **Diagnose associative retrieval failure modes** using state matrix inspection and single-fact ablation surgery, tracing how non-orthogonal keys cross-contaminate the superimposed memory state.
+
+---
+
+## The 60-Second Prediction
+
+> **Pedagogical Assessment & Opportunity:**  
+> A code audit of [`frontend/src/components/ExplainItBack.tsx`](frontend/src/components/ExplainItBack.tsx) and [`frontend/src/components/MemorySlider.tsx`](frontend/src/components/MemorySlider.tsx) reveals that while the project offers retrospective explanation logging, **there is currently no point where the learner commits to a prediction before the real result is displayed**.
+
+To maximize learning effectiveness, we propose adding a **Gated Prediction Challenge** before unlocking the live exploration slider:
+1. **Prompt Gate:** Before viewing the capacity curve or dragging the slider past $N=1$, present a 60-second diagnostic question:  
+   *"In a fixed memory matrix of dimension $d = 32$, if we store $N = 50$ distinct facts, will exact-recall accuracy be closer to 100%, 50%, or 0%?"*
+2. **Hypothesis Commitment:** Force the learner to select one of three concrete hypotheses: `[ ~100% ]`, `[ ~50% ]`, or `[ ~0% ]`.
+3. **Empirical Reveal:** Upon submitting, immediately unlock the slider, run the live PyTorch forward pass, and contrast their intuition against the empirical reality (~0% due to severe key cross-talk past rank $d=32$).
 
 ---
 
@@ -62,15 +100,18 @@ To satisfy the **Interactive Substrate & Honesty** criteria:
 
 ---
 
-## 6. How to Run Locally
+## 6. How to Run Locally & Deploy
 
-### Start Backend:
+### Local Development
+
+#### 1. Start Backend:
 ```bash
 cd backend
+pip install -r requirements.txt
 python -m uvicorn main:app --host 127.0.0.1 --port 8000
 ```
 
-### Start Frontend:
+#### 2. Start Frontend:
 ```bash
 cd frontend
 npm install
@@ -80,5 +121,47 @@ Open your browser at `http://127.0.0.1:5173`.
 
 ---
 
+### Public Cloud Deployment (No Login Required)
+
+The application is structured for instant zero-cost public deployment:
+- **Backend (Python / FastAPI):** Deployed on **Render** (Free Web Service) or **Railway**. Requires **CPU only** — all PyTorch operations execute over tiny $32 \times 32$ matrices ($<10^5$ FLOPs, $<3\text{ms}$ latency). Zero GPU required.
+- **Frontend (React / Vite):** Deployed on **Vercel** (Free Static Site) with SPA rewrites via `vercel.json`.
+
+#### Option A: One-Click Render Blueprint
+1. In the [Render Dashboard](https://dashboard.render.com), click **New +** → **Blueprint**.
+2. Connect this GitHub repository. Render reads `render.yaml` and provisions:
+   - `memory-cliff-backend` (Web Service, `python 3.11`, health check at `/health`).
+   - `memory-cliff-frontend` (Static Site, auto-linked to backend).
+
+#### Option B: Render Backend + Vercel Frontend (Recommended)
+1. **Deploy Backend to Render:**
+   - Go to [render.com](https://render.com) → **New +** → **Web Service**.
+   - Root Directory: `backend`
+   - Build Command: `pip install -r requirements.txt`
+   - Start Command: `uvicorn main:app --host 0.0.0.0 --port $PORT`
+   - Health Check Path: `/health`
+   - Copy your public backend URL (e.g. `https://memory-cliff-backend.onrender.com`).
+2. **Deploy Frontend to Vercel:**
+   - Go to [vercel.com](https://vercel.com) → **Add New...** → **Project**.
+   - Root Directory: `frontend`
+   - Framework Preset: `Vite`
+   - Build Command: `npm run build`
+   - Output Directory: `dist`
+   - Environment Variable: Add `VITE_API_BASE` = `https://<your-backend>.onrender.com`
+   - Click **Deploy**. Vercel will output your public, sign-in-free URL (e.g. `https://memory-cliff.vercel.app`).
+
+---
+
 ## 7. AI-Assisted Development Disclosure
-AI coding assistants were used to accelerate frontend scaffolding, Vite/Tailwind configuration, and PyTorch vectorized tensor operations. All mathematical formulations, model definitions, and associative memory evaluation pipelines were implemented from scratch and verified.
+AI coding assistants (Google DeepMind / Anthropic LLMs) were utilized during development under direct human architectural control:
+- **Code & Infrastructure:** AI tools assisted in scaffolding Vite/React UI components, Tailwind layout utility classes, and initial PyTorch vectorized tensor boilerplate. All mathematical formulations, associative state update equations, ablation surgery routines, and server endpoints were written, code-reviewed, and verified from scratch by the team.
+- **Prose & Concept Formulation:** The falsifiable core claim, pedagogical framing, and analytical comparisons in `README.md` and `concept_summary.md` were authored and structured by the team. AI was employed for copy-editing, conciseness tuning to adhere to the 500–950 word limit, and bibliographic verification against primary arXiv literature.
+- **Asset & Data Integrity Confirmation:** We explicitly confirm that **no undisclosed AI-generated data, synthetic hallucinations, or uncredited assets** exist in this repository. All evaluation sequences are deterministically synthesized via `model-training/data_generation.py` and `backend/associative_engine.py`, and all precomputed data originates from verified PyTorch training runs (`model-training/train.py`).
+
+---
+
+## Known Limitation
+
+- **Hand-Crafted Mathematical Analogue, Not an Official BDH Checkpoint:** The Fixed Memory model is an isolated, hand-crafted mathematical implementation of the additive outer-product Hebbian write rule ($W_t = W_{t-1} + v_t k_t^\top$) inspired by the principles in *The Dragon Hatchling* (arXiv:2509.26507). It does not execute Pathway's official BDH or BDH-CQ pretrained checkpoints, nor does it incorporate BDH's multi-layer spiking integrate-and-fire thresholding or proprietary recurrent latent workspace dynamics.
+- **No Matched-Scale Baseline Against Trained BDH Weights:** No empirical evaluation against trained BDH weights is provided, as official BDH-CQ weights and training pipelines remain proprietary.
+- **Toy-Scale Parameterization ($d = 32$):** The benchmark operates at an educational toy dimension ($d = 32$, state size $32 \times 32 = 1,024$ floats) to allow instantaneous, deterministic in-browser tensor computation and legible state heatmap inspection, rather than production LLM dimensions ($d = 2,048$ to $8,192$).

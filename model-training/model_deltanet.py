@@ -62,7 +62,12 @@ class LinearAttention(nn.Module):
         V = self.W_v(x)                          # (B, T, d_state)
 
         # ── Parallel form of causal linear attention ──
-        # attn[b, t, s] = Q[b,t] · K[b,s]  for s ≤ t
+        # Computes O = ((Q @ K^T) * causal) @ V. By the associative property of matrix
+        # multiplication, this is algebraically identical to the recurrent formulation
+        # S_t = S_{t-1} + v_t (k_t)^T with o_t = S_t q_t, but avoids O(T) sequential
+        # recurrence steps during GPU training.
+        # Note: This file implements additive linear attention (Katharopoulos et al., 2020),
+        # whereas backend/associative_engine.py implements the subtractive DeltaNet rule.
         attn = torch.bmm(Q, K.transpose(1, 2))                 # (B, T, T)
         causal = torch.tril(torch.ones(T, T, device=x.device))  # lower-tri mask
         attn = attn * causal

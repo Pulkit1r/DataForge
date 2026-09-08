@@ -69,9 +69,10 @@ def run_full_attention(
     n_facts, d = keys.shape
     queries = keys[query_order]  # (n_facts, d)
     
-    # Cosine similarities between queries and all keys
-    # Scale by sqrt(d) as in standard scaled dot-product attention
-    scores = torch.matmul(queries, keys.T) * 15.0  # high temperature for sharp lookup
+    # Cosine similarities between queries and all keys.
+    # Scaled by an inverse temperature factor (15.0) to sharpen the softmax distribution,
+    # emulating crisp dictionary-like associative retrieval in full attention.
+    scores = torch.matmul(queries, keys.T) * 15.0
     attn_weights = F.softmax(scores, dim=-1)
     retrieved = torch.matmul(attn_weights, values)  # (n_facts, d)
     
@@ -79,7 +80,7 @@ def run_full_attention(
     target_values = values[query_order]
     sims = (retrieved * target_values).sum(dim=-1)
     
-    # Exact match criterion: cosine similarity > 0.90
+    # Exact match criterion: cosine similarity > 0.90 reflects sharp nearest-neighbor retrieval.
     correct_per_fact = (sims > 0.90).tolist()
     accuracy = sum(correct_per_fact) / n_facts if n_facts > 0 else 1.0
     kv_cache_size = 2 * n_facts * d  # K and V vectors stored
@@ -104,20 +105,24 @@ def run_additive_fast_weight(
     for t in range(n_facts):
         k = keys[t].unsqueeze(1)    # (d, 1)
         v = values[t].unsqueeze(0)  # (1, d)
-        W = W + torch.matmul(k, v)  # outer product write: (d, d)
+        # Outer-product write: W += k * v^T writes correlation between key and target value.
+        # Querying with q via q @ W yields sum_i (q^T k_i) v_i.
+        W = W + torch.matmul(k, v)  # (d, d)
+        # Checkpoint state snapshots across training for the StateMicroscope heatmap
         if t < 16 or t == n_facts - 1 or (t + 1) % max(1, n_facts // 8) == 0:
             step_states.append(W.clone().tolist())
 
     queries = keys[query_order]  # (n_facts, d)
-    # Readout: y = q * W -> (n_facts, d)
+    # Linear readout: y = q @ W -> (n_facts, d)
     retrieved = torch.matmul(queries, W)
     retrieved = F.normalize(retrieved, p=2, dim=-1)
 
     target_values = values[query_order]
     sims = (retrieved * target_values).sum(dim=-1)
 
-    # Success threshold: positive alignment with ground truth
-    # In fixed associative memory, dot product degradation occurs as N > d
+    # Success threshold: cosine similarity > 0.70 indicates high directional fidelity.
+    # In continuous linear associative memories, random unit vectors exhibit minor non-zero
+    # cross-correlations even when N <= d, so 0.70 reliably separates true recall from noise.
     correct_per_fact = (sims > 0.70).tolist()
     accuracy = sum(correct_per_fact) / n_facts if n_facts > 0 else 0.0
     state_size = d * d  # Fixed 32x32 = 1024 floats
@@ -142,11 +147,13 @@ def run_deltanet(
         k = keys[t].unsqueeze(1)    # (d, 1)
         v = values[t].unsqueeze(0)  # (1, d)
         
-        # Current prediction: k^T * W
+        # Current prediction from existing memory: k^T * W
         pred_v = torch.matmul(k.T, W)  # (1, d)
+        # Residual error: difference between target value and current retrieval
         error = v - pred_v             # (1, d)
         
-        # Subtractive corrective update
+        # Subtractive corrective update: subtracts erroneous prediction cross-talk
+        # before binding the new key-value pair, dampening collision interference.
         W = W + beta * torch.matmul(k, error)
 
     queries = keys[query_order]

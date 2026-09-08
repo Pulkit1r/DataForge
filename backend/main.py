@@ -30,6 +30,8 @@ app.add_middleware(
 )
 
 # ── Precomputed Curve Cache ──────────────────────────────────────────────────
+# Computed once at backend startup over 5 random seeds to serve the static capacity
+# curve (/precomputed-curve) instantly, decoupling chart rendering from live user slider latency.
 N_CURVE_VALUES = [1, 4, 8, 12, 16, 20, 24, 28, 32, 40, 48, 56, 64, 80, 96]
 CURVE_CACHE = ae.compute_capacity_curve(N_CURVE_VALUES, d=32, n_seeds=5)
 
@@ -65,7 +67,19 @@ class PredictResponse(BaseModel):
 
 
 # ── Endpoints ────────────────────────────────────────────────────────────────
+@app.get("/")
+@app.get("/health")
+def health_check():
+    """Health check for deployment verification and load balancers."""
+    return {
+        "status": "healthy",
+        "service": "The Memory Cliff & Fast Weights API",
+        "version": "1.0.0",
+    }
+
+
 @app.post("/predict", response_model=PredictResponse)
+@app.post("/api/predict", response_model=PredictResponse)
 def predict(req: PredictRequest):
     """
     Live computation across all three models:
@@ -133,6 +147,7 @@ def predict(req: PredictRequest):
 
 
 @app.get("/precomputed-curve")
+@app.get("/api/precomputed-curve")
 def precomputed_curve():
     """Returns capacity curve across N in [1, 96] with d=32 threshold."""
     return CURVE_CACHE

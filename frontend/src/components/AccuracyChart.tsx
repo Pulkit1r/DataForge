@@ -28,9 +28,14 @@ export function AccuracyChart({ curveData, currentN }: AccuracyChartProps) {
 
   return (
     <div className="bg-gray-800/90 rounded-xl p-6 border border-gray-700/60 shadow-lg space-y-4">
-      <div className="flex justify-between items-start">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div>
-          <h3 className="text-lg font-bold text-gray-100">Exact Retrieval Accuracy vs. Stored Fact Load</h3>
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="text-lg font-bold text-gray-100">Exact Retrieval Accuracy vs. Stored Fact Load</h3>
+            <span className="px-2 py-0.5 rounded text-[10px] font-mono font-semibold uppercase tracking-wider bg-amber-950/80 text-amber-400 border border-amber-800/80">
+              Precomputed / Multi-Seed Simulation
+            </span>
+          </div>
           <p className="text-xs text-gray-400 mt-0.5">
             Averaged over multiple random seeds. Notice the sharp degradation around the orthogonal capacity boundary <strong className="text-amber-400">d = 32</strong>.
           </p>
