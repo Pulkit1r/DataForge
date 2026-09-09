@@ -35,12 +35,18 @@ This document details all third-party dependencies, open-source libraries, UI as
 
 ---
 
-## 4. Precomputed Data Provenance (`model-training/checkpoints/precomputed_curve.json`)
+## 4. Precomputed Data Provenance & Runtime Architecture
 
+### A. Production Web Application Capacity Curve (`backend/main.py`)
+- **Runtime Generation:** The capacity curve served at `/precomputed-curve` (and rendered in the interactive chart) is **not** loaded from a static checkpoint file. Instead, it is computed in RAM at backend startup via `ae.compute_capacity_curve(N_CURVE_VALUES, d=32, n_seeds=5)`.
+- **Methodology:** Averages accuracy across all three comparative architectures (Full Attention, Fixed Memory BDH Analogue, DeltaNet) over 5 independent random seeds across 15 fact loads $N \in [1, 4, 8, 12, 16, 20, 24, 28, 32, 40, 48, 56, 64, 80, 96]$. Computing this in RAM once at server initialization guarantees instantaneous chart rendering without coupling background simulation latency to live user slider interactions.
+
+### B. Offline Neural Training Verification Artifact (`model-training/checkpoints/precomputed_curve.json`)
+- **Role:** Offline research and model-training verification reference — **not** the production web application's runtime data source.
 - **Generating Script:** [`model-training/train.py`](model-training/train.py) (executed via PyTorch).
 - **Task Formulation:** Multi-Query Associative Recall (MQAR) benchmark generated from [`model-training/data_generation.py`](model-training/data_generation.py) with vocabulary size $V = 130$.
 - **Architectures Trained:**
   - **Model A (Transformer):** 2-layer transformer, $d_\text{model}=64$, 2 heads ($d_\text{head}=32$), $d_\text{ff}=128$, explicit KV cache.
   - **Model B (DeltaNet):** 2-layer recurrent network, $d_\text{model}=64$, $32 \times 32$ state matrix ($d_\text{state}=32$), subtractive delta rule update.
 - **Training Protocol:** 1,000 optimization steps on synthetic MQAR sequences ($N \in [4, 64]$) using AdamW ($\text{LR} = 10^{-3}$) and Cosine Annealing learning rate schedule.
-- **Evaluation & Curve Generation:** Evaluated under `torch.no_grad()` across 6 batches of 32 sequences (192 sequences per fact load $N$) over $N \in [4, 8, 12, 16, 20, 24, 28, 32, 40, 48, 56, 64]$. The resulting accuracy metrics and state configurations are serialized directly into `precomputed_curve.json`.
+- **Evaluation & Verification:** Evaluated under `torch.no_grad()` across 6 batches of 32 sequences (192 sequences per fact load $N$) over $N \in [4, 8, 12, 16, 20, 24, 28, 32, 40, 48, 56, 64]$. The resulting accuracy metrics and state configurations are serialized directly into `precomputed_curve.json` to verify that full parameter neural networks exhibit the same empirical capacity cliff as the idealized vector engine.

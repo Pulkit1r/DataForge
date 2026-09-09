@@ -28,33 +28,33 @@ DataForge/
     ├── data_generation.py      # Synthetic MQAR data generator (vocab=130)
     ├── model_transformer.py    # PyTorch 2-layer Causal Transformer baseline
     ├── model_deltanet.py       # PyTorch 2-layer Linear Attention model
-    ├── train.py                # Multi-N training & precomputed curve export
+    ├── train.py                # Multi-N training & offline curve verification
     └── checkpoints/
-        └── precomputed_curve.json # Serialized evaluation metrics
+        └── precomputed_curve.json # Offline trained neural model evaluation metrics
 ```
 
 ### File-by-File Breakdown:
 
 #### 1. `backend/associative_engine.py` (Core Vector Math Engine)
 - **`generate_synthetic_facts(n_facts, d=32, seed, corrupt_index, remove_index)`**:
-  Generates $N$ random Gaussian key vectors and value vectors in $\mathbb{R}^{32}$, normalized to unit length ($\|k_i\|_2 = 1, \|v_i\|_2 = 1$). Random vectors in $\mathbb{R}^{32}$ have an expected dot product of $0$ and variance $1/d = 1/32 \approx 0.031$, making them near-orthogonal when $N \ll 32$. If `corrupt_index` is specified, `values[corrupt_index]` is replaced with a fresh random vector. If `remove_index` is specified, `keys[remove_index]` is replaced. Returns `(keys, values, query_order)`.
-- **`run_full_attention(keys, values, query_order)`**:
-  Computes scaled dot-product attention against an unbounded explicit KV cache. Cosine similarities `queries @ keys.T` are multiplied by `15.0` (inverse temperature $\tau \approx 0.067$) to sharpen softmax probabilities into near-deterministic dictionary lookups. Retrieved vectors $\hat{v}_i$ are matched against target $v_i$; cosine similarity $> 0.90$ counts as correct. Memory footprint is $2 \cdot N \cdot d$ floats.
-- **`run_additive_fast_weight(keys, values, query_order)`**:
-  Initializes $W_0 = \mathbf{0} \in \mathbb{R}^{32 \times 32}$. For each fact $t$, performs the outer product update $W_t = W_{t-1} + k_t v_t^\top$. Query readout is $y = q W$. Because $q W = \sum_j (q^\top k_j) v_j$, querying with $k_i$ yields $\|k_i\|^2 v_i + \sum_{j \ne i} (k_i^\top k_j) v_j$. When $N \le 32$, near-orthogonality keeps cross-talk low. When $N > 32$, linear dependence forces non-zero dot products, creating interference that drowns out $v_i$. Success threshold is cosine similarity $> 0.70$. State size is strictly constant ($32 \times 32 = 1,024$ floats).
-- **`run_deltanet(keys, values, query_order, beta=0.5)`**:
-  Implements the corrective delta rule. At each step $t$, it first reads what the current matrix predicts for key $k_t$: $\hat{v}_t = k_t^\top W_{t-1}$. It calculates the residual error $e_t = v_t - \hat{v}_t$, and updates $W_t = W_{t-1} + \beta k_t e_t^\top = W_{t-1}(I - \beta k_t k_t^\top) + \beta k_t v_t^\top$. The term $(I - \beta k_t k_t^\top)$ actively dampens previous state memory along direction $k_t$, preventing unconstrained cross-talk accumulation.
+  Generates $N$ random Gaussian key vectors and value vectors in $\mathbb{R}^{32}$, normalized to unit length ($\|k_i\|_2 = 1, \|v_i\|_2 = 1$). Random vectors in $\mathbb{R}^{32}$ have an expected dot product of $0$ and variance $1/d = 1/32 \approx 0.031$, making them near-orthogonal when $N \ll 32$. Query order permutation is generated deterministically before surgery. If `corrupt_index` is specified, the stored value written into memory is corrupted while the evaluation target remains the ground-truth value. If `remove_index` is specified, the key-value pair is excluded from memory storage while still queried. Returns `(keys, values, query_order, store_keys, store_values)`.
+- **`run_full_attention(keys, values, query_order, store_keys, store_values)`**:
+  Computes scaled dot-product attention against an unbounded explicit KV cache (`store_keys`, `store_values`). Cosine similarities `queries @ store_keys.T` are multiplied by `15.0` (inverse temperature $\tau \approx 0.067$) to sharpen softmax probabilities into near-deterministic dictionary lookups. Retrieved vectors $\hat{v}_i$ are matched against target $v_i$; cosine similarity $> 0.90$ counts as correct. Memory footprint is $2 \cdot N_\text{stored} \cdot d$ floats.
+- **`run_additive_fast_weight(keys, values, query_order, store_keys, store_values)`**:
+  Initializes $W_0 = \mathbf{0} \in \mathbb{R}^{32 \times 32}$. For each fact $t$ in storage, performs the outer product update $W_t = W_{t-1} + k_t v_t^\top$. Query readout is $y = q W$. Because $q W = \sum_j (q^\top k_j) v_j$, querying with $k_i$ yields $\|k_i\|^2 v_i + \sum_{j \ne i} (k_i^\top k_j) v_j$. When $N \le 32$, near-orthogonality keeps cross-talk low. When $N > 32$, linear dependence forces non-zero dot products, creating interference that drowns out $v_i$. Success threshold is cosine similarity $> 0.70$. State size is strictly constant ($32 \times 32 = 1,024$ floats).
+- **`run_deltanet(keys, values, query_order, store_keys, store_values, beta=0.5)`**:
+  Implements the corrective delta rule. At each step $t$ in storage, it first reads what the current matrix predicts for key $k_t$: $\hat{v}_t = k_t^\top W_{t-1}$. It calculates the residual error $e_t = v_t - \hat{v}_t$, and updates $W_t = W_{t-1} + \beta k_t e_t^\top = W_{t-1}(I - \beta k_t k_t^\top) + \beta k_t v_t^\top$. The term $(I - \beta k_t k_t^\top)$ actively dampens previous state memory along direction $k_t$, preventing unconstrained cross-talk accumulation.
 - **`compute_capacity_curve(n_values, d=32, n_seeds=5)`**:
-  Runs multi-seed simulations over $N \in [1, 96]$ across 5 random seeds to compute the precomputed capacity curve.
+  Runs multi-seed simulations over $N \in [1, 96]$ across 5 random seeds at server startup to compute the production capacity curve cached in RAM.
 
 #### 2. `backend/main.py` (FastAPI Server)
-- **`CURVE_CACHE`**: Computed once at server boot via `ae.compute_capacity_curve()`. Exposed via `GET /precomputed-curve` to deliver zero-latency chart rendering.
+- **`CURVE_CACHE`**: Computed once in RAM at server boot via `ae.compute_capacity_curve(N_CURVE_VALUES, d=32, n_seeds=5)`. Exposed via `GET /precomputed-curve` to deliver zero-latency chart rendering across $N \in [1, 96]$.
 - **`POST /predict`**: Accepts `PredictRequest(n_pairs, seed, remove_index, corrupt_index)`. Clamps $N$ between 1 and 96, runs live PyTorch tensor operations across all three models via `associative_engine.py`, and returns per-fact accuracy arrays, memory metrics, and raw $32 \times 32$ state tensors.
 
 #### 3. `model-training/model_deltanet.py` & `model_transformer.py`
 - **`model_transformer.py`**: Standard 2-layer causal Transformer with multi-head attention ($n_\text{heads}=2, d_\text{head}=32, d_\text{model}=64$). Uses causal lower-triangular masking and causal KV cache.
 - **`model_deltanet.py`**: 2-layer linear attention network using the ELU+1 positive feature map $\phi(x) = \text{ELU}(x) + 1$. Evaluates causal linear attention using the GPU-parallel form $O = ((Q K^\top) \odot \text{causal}) V$.
-- **`model-training/train.py`**: Trains both models on Multi-Query Associative Recall (MQAR) for 1,000 steps with AdamW and Cosine Annealing, then evaluates accuracy across $N \in [4, 64]$ to produce `checkpoints/precomputed_curve.json`.
+- **`model-training/train.py`**: Trains both models on Multi-Query Associative Recall (MQAR) for 1,000 steps with AdamW and Cosine Annealing, then evaluates accuracy across $N \in [4, 64]$ to produce `checkpoints/precomputed_curve.json` as an offline verification reference.
 
 ---
 
@@ -131,20 +131,21 @@ DataForge/
 
 ---
 
-### Q7: "How is `model-training/checkpoints/precomputed_curve.json` generated?"
-**The Answer:**
-- Generated by running `python model-training/train.py`.
-- It trains `TransformerModel` and `DeltaNetModel` on synthetic Multi-Query Associative Recall sequences (vocabulary size 130, sequence length up to 260) for 1,000 steps using AdamW ($lr=10^{-3}$) and Cosine Annealing.
-- It evaluates both models on $N \in [4, 8, 12, 16, 20, 24, 28, 32, 40, 48, 56, 64]$ across 6 batches of 32 sequences (192 sequences per $N$).
-- The exact accuracy values and layer metadata are saved to `precomputed_curve.json`.
+### Q7: "How is the capacity curve generated, and what is `model-training/checkpoints/precomputed_curve.json`?"
+**The Answer (Clarity on Production vs. Offline Reference):**
+- **Production Web Application Data Source:** In production, `backend/main.py` computes its capacity curve directly in RAM at server boot via `ae.compute_capacity_curve(N_CURVE_VALUES, d=32, n_seeds=5)`. It averages accuracy across all three comparative architectures (Full Attention, Fixed Memory BDH Analogue, DeltaNet) over 5 independent random seeds across 15 fact loads $N \in [1, 4, 8, 12, 16, 20, 24, 28, 32, 40, 48, 56, 64, 80, 96]$. It never reads from disk, ensuring instant in-browser chart rendering without network/disk latency.
+- **Offline Checkpoint Generation:** `model-training/checkpoints/precomputed_curve.json` is an **offline research verification reference** generated by running `python model-training/train.py`. It trains full-parameter PyTorch neural networks (`TransformerModel` and `DeltaNetModel`) on synthetic Multi-Query Associative Recall (MQAR) sequences (vocabulary size 130) for 1,000 steps and evaluates them on $N \in [4, 64]$ across 192 sequences per $N$. It confirms that trained neural network weights exhibit the exact same empirical capacity cliff as the idealized vector engine.
 
 ---
 
 ### Q8: "How does Demonstration Surgery demonstrate non-locality in associative memory?"
 **The Answer:**
-- In `backend/associative_engine.py:generate_synthetic_facts()`, passing `corrupt_index=k` resamples `values[k]` to an independent random vector.
-- In **Full Attention**, corrupting fact $k$ only breaks recall for fact $k$. Accuracy drops by exactly $1/N$, and all other $N-1$ facts remain unaffected because they reside in isolated KV cache slots.
-- In **Fixed Memory**, because all facts are superimposed into a shared matrix $W = \sum k_i v_i^\top$, corrupting fact $k$ alters the entire matrix. When $N$ is near or above capacity, changing one value vector shifts the retrieval vectors for neighboring facts, illustrating that associative memory storage is distributed rather than localized.
+- In `backend/associative_engine.py:generate_synthetic_facts()`, the memory storage and evaluation query sets diverge:
+  - When `corrupt_index=k` is set, the memory state $W$ (or KV cache) is written with a corrupted vector at slot $k$, while evaluation tests against the original ground-truth target.
+  - When `remove_index=k` is set, slot $k$ is omitted entirely from storage (the model never learns it), but is still queried to test whether the model can retrieve a fact it was never taught.
+  - The query permutation order is generated deterministically before drawing surgery vectors, guaranteeing that baseline and post-surgery evaluations compare identical queries.
+- In **Full Attention**, corrupting or removing fact $k$ only breaks recall for fact $k$. Accuracy drops by exactly $1/N$ ($100\% \to 90\%$ at $N=10$, $100\% \to 97.5\%$ at $N=40$), and all other facts remain unaffected because they reside in isolated KV cache slots.
+- In **Fixed Memory**, because all facts are superimposed into a shared matrix $W = \sum k_i v_i^\top$, removing or corrupting fact $k$ alters the entire state matrix. At $N \le 32$, only fact $k$ fails. But past capacity ($N > 32$, e.g. $N=40$), removing a fact eliminates an interfering vector from $W$, altering the cross-talk landscape and shifting accuracy across neighboring facts.
 
 ---
 

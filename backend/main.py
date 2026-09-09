@@ -90,7 +90,7 @@ def predict(req: PredictRequest):
     n = max(1, min(req.n_pairs, 96))
     d = ae.D_KEY
 
-    keys, values, query_order = ae.generate_synthetic_facts(
+    keys, values, query_order, store_keys, store_values = ae.generate_synthetic_facts(
         n_facts=n,
         d=d,
         seed=req.seed if req.seed is not None else 42,
@@ -99,13 +99,13 @@ def predict(req: PredictRequest):
     )
 
     # 1. Full Attention
-    correct_a, acc_a, kv_size = ae.run_full_attention(keys, values, query_order)
+    correct_a, acc_a, kv_size = ae.run_full_attention(keys, values, query_order, store_keys, store_values)
 
     # 2. Additive Fast-Weight (BDH Analogue)
-    correct_b, acc_b, state_size_b, W_b, step_states = ae.run_additive_fast_weight(keys, values, query_order)
+    correct_b, acc_b, state_size_b, W_b, step_states = ae.run_additive_fast_weight(keys, values, query_order, store_keys, store_values)
 
     # 3. DeltaNet (Corrective Contrast)
-    correct_c, acc_c, state_size_c = ae.run_deltanet(keys, values, query_order)
+    correct_c, acc_c, state_size_c = ae.run_deltanet(keys, values, query_order, store_keys, store_values)
 
     return PredictResponse(
         n_facts=n,
