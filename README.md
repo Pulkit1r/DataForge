@@ -5,6 +5,7 @@
 
 ### 🌐 Live Public Artifact & Submission Links
 - **Live Interactive Web Application:** [https://memory-cliff-frontend.onrender.com](https://memory-cliff-frontend.onrender.com) *(Publicly accessible without login or authentication)*
+- **Public Source Code Repository:** [https://github.com/Pulkit1r/DataForge](https://github.com/Pulkit1r/DataForge)
 - **Concept Summary Briefing (PDF):** [`blog.pdf`](blog.pdf) *(2-page clean briefing with rendered math and verified arXiv citations)*
 - **Oral Defense & Live Grilling Script:** [`DEFENSE.md`](DEFENSE.md)
 - **Third-Party Credits & Provenance:** [`CREDITS.md`](CREDITS.md)
@@ -116,6 +117,13 @@ npm run dev -- --host 127.0.0.1 --port 5173
 ```
 Open your browser at `http://127.0.0.1:5173`.
 
+#### 3. Run Offline Neural Model Training Verification (Optional):
+```bash
+# Trains 2-layer Transformer & DeltaNet on synthetic Multi-Query Associative Recall (MQAR)
+python model-training/train.py
+```
+This evaluates both architectures under `torch.no_grad()` over $N \in [4, 64]$ and verifies that full multi-layer networks exhibit the same empirical cliff, reproducing `model-training/checkpoints/precomputed_curve.json`.
+
 ---
 
 ### Public Cloud Deployment (No Login Required)
@@ -154,6 +162,7 @@ AI coding assistants (Google DeepMind / Anthropic LLMs) were utilized during dev
 - **Code & Infrastructure:** AI tools assisted in scaffolding Vite/React UI components, Tailwind layout utility classes, and initial PyTorch vectorized tensor boilerplate. All mathematical formulations, associative state update equations, ablation surgery routines, and server endpoints were written, code-reviewed, and verified from scratch by the team.
 - **Prose & Concept Formulation:** The falsifiable core claim, pedagogical framing, and analytical comparisons in `README.md` and `concept_summary.md` were authored and structured by the team. AI was employed for copy-editing, conciseness tuning to adhere to the 500–950 word limit, and bibliographic verification against primary arXiv literature.
 - **Asset & Data Integrity Confirmation:** We explicitly confirm that **no undisclosed AI-generated data, synthetic hallucinations, or uncredited assets** exist in this repository. All evaluation sequences are deterministically synthesized via `model-training/data_generation.py` and `backend/associative_engine.py`, and all precomputed data originates from verified PyTorch training runs (`model-training/train.py`).
+- **Source, Asset & License Disclosure:** Comprehensive provenance records for all code dependencies, data pipelines, model weights, SVG iconography, system fonts, and software licenses are formally documented in [`CREDITS.md`](CREDITS.md) under the [MIT License](LICENSE).
 
 ---
 
