@@ -4,7 +4,7 @@
 > *DataForge 2026 — Pathway Track Submission*
 
 ### 🌐 Live Public Artifact & Submission Links
-- **Live Interactive Web Application:** `[Pending Deployment — See Deployment Guide in Section 6]` *(Publicly accessible without login or authentication)*
+- **Live Interactive Web Application:** [https://memory-cliff-frontend.onrender.com](https://memory-cliff-frontend.onrender.com) *(Publicly accessible without login or authentication)*
 - **Concept Summary Briefing (PDF):** [`blog.pdf`](blog.pdf) *(2-page clean briefing with rendered math and verified arXiv citations)*
 - **Oral Defense & Live Grilling Script:** [`DEFENSE.md`](DEFENSE.md)
 - **Third-Party Credits & Provenance:** [`CREDITS.md`](CREDITS.md)
