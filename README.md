@@ -39,16 +39,13 @@ After interacting with this substrate, the learner will be able to:
 
 ---
 
-## The 60-Second Prediction
+## The 60-Second Prediction Gate
 
-> **Pedagogical Assessment & Opportunity:**  
-> A code audit of [`frontend/src/components/ExplainItBack.tsx`](frontend/src/components/ExplainItBack.tsx) and [`frontend/src/components/MemorySlider.tsx`](frontend/src/components/MemorySlider.tsx) reveals that while the project offers retrospective explanation logging, **there is currently no point where the learner commits to a prediction before the real result is displayed**.
-
-To maximize learning effectiveness, we propose adding a **Gated Prediction Challenge** before unlocking the live exploration slider:
-1. **Prompt Gate:** Before viewing the capacity curve or dragging the slider past $N=1$, present a 60-second diagnostic question:  
-   *"In a fixed memory matrix of dimension $d = 32$, if we store $N = 50$ distinct facts, will exact-recall accuracy be closer to 100%, 50%, or 0%?"*
-2. **Hypothesis Commitment:** Force the learner to select one of three concrete hypotheses: `[ ~100% ]`, `[ ~50% ]`, or `[ ~0% ]`.
-3. **Empirical Reveal:** Upon submitting, immediately unlock the slider, run the live PyTorch forward pass, and contrast their intuition against the empirical reality (~0% due to severe key cross-talk past rank $d=32$).
+To maximize pedagogical effectiveness, the dashboard features an interactive **Gated Prediction Challenge** ([`frontend/src/components/PredictionGate.tsx`](frontend/src/components/PredictionGate.tsx)):
+1. **Hypothesis Commitment:** Before exploring higher fact loads, learners are prompted:  
+   *"In a fixed memory matrix of dimension $d = 32$, if we store $N = 48$ distinct facts, will exact-recall accuracy be closer to ~100%, ~50%, or ~0–20%?"*
+2. **Pre-Execution Commitment:** Learners commit to a concrete prediction (`~100%`, `~50%`, or `~0–20%`).
+3. **Empirical Reveal:** Upon commitment, the live PyTorch recall results are revealed side-by-side with their prediction, confronting intuitive linear scaling assumptions with the reality of key cross-talk past rank $d = 32$.
 
 ---
 
