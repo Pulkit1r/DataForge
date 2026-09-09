@@ -6,7 +6,7 @@
 ### 🌐 Live Public Artifact & Submission Links
 - **Live Interactive Web Application:** [https://memory-cliff-frontend.onrender.com](https://memory-cliff-frontend.onrender.com) *(Publicly accessible without login or authentication)*
 - **Public Source Code Repository:** [https://github.com/Pulkit1r/DataForge](https://github.com/Pulkit1r/DataForge)
-- **Concept Summary Briefing (PDF):** [`blog.pdf`](blog.pdf) *(2-page clean briefing with rendered math and verified arXiv citations)*
+- **Concept Summary Briefing (PDF):** [`blog.pdf`](blog.pdf) *(1-page authoritative briefing with rendered math, architecture comparison table, evidence taxonomy, and verified arXiv citations)*
 - **Oral Defense & Live Grilling Script:** [`DEFENSE.md`](DEFENSE.md)
 - **Third-Party Credits & Provenance:** [`CREDITS.md`](CREDITS.md)
 - **Open Source License:** [MIT License](LICENSE)

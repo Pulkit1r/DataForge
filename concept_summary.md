@@ -22,16 +22,15 @@ However, linear algebra imposes **the Memory Cliff**: a fixed matrix with linear
 
 Our substrate evaluates three architectures on a synthetic associative recall task ($d=32$, $N \in [1, 96]$):
 
-1. **Full Attention Baseline (KV Cache):**
-   - *Mechanism:* Explicit $(k_i, v_i)$ caching with dot-product readout: $y = \text{Softmax}(q K^\top) V$.
-   - *Behavior:* Maintains 100% recall, incurring $\mathcal{O}(N)$ memory costs ($2 \cdot N \cdot d$ floats).
-2. **Fixed Memory — Additive Fast-Weights (Primary BDH Analogue):**
-   - *Mechanism:* Outer-product write rule: $W_t = W_{t-1} + v_t k_t^\top$, with linear readout $y = W_t q$.
-   - *Behavior:* Constant $1,024$-float footprint. High fidelity ($>95\%$) for $N \le 32$; collapses for $N > 32$.
-   - *Labeling:* Mechanistic analogue of BDH's Hebbian update, not an official BDH model.
-3. **DeltaNet Contrast (Corrective Delta Rule):**
-   - *Mechanism:* Subtractive delta update: $W_t = W_{t-1} + \beta (v_t - W_{t-1} k_t) k_t^\top$.
-   - *Behavior:* Constant $1,024$-float footprint; subtracts prediction errors to dampen collision interference.
+| Architecture | Memory Storage Footprint | Write Update Mechanism | Readout Rule | Recall ($N=48 > d$) | Role & Labeling |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **Full Attention** | $\mathcal{O}(N \cdot d)$ (Unbounded) | Append $(k_t, v_t)$ buffer | $\text{Softmax}(q K^\top) V$ | **100%** (Lossless) | Ground-truth baseline |
+| **Fixed Memory** | $\mathcal{O}(d^2) = 1{,}024$ floats | $W_{t-1} + v_t k_t^\top$ (Additive) | Linear $y = W q$ | **31%** (Cliff collapse) | Primary BDH analogue |
+| **DeltaNet** | $\mathcal{O}(d^2) = 1{,}024$ floats | $W_{t-1} + \beta (v_t - W_{t-1} k_t) k_t^\top$ | Linear $y = W q$ | **71%** (Damped error) | Corrective contrast |
+
+- **Full Attention Baseline:** Maintains lossless exact recall by growing its KV cache linearly, incurring an $\mathcal{O}(N \cdot d)$ hardware footprint ($2 \cdot N \cdot d$ floats per head).
+- **Fixed Memory (Additive BDH Analogue):** Compresses facts via outer-product writes ($W_t = W_{t-1} + v_t k_t^\top$) into a static $32 \times 32$ matrix ($1{,}024$ floats). Preserves $>95\%$ recall while $N \le 32$, but collapses abruptly beyond rank capacity ($N > 32$).
+- **DeltaNet Contrast:** Mitigates collision interference via a subtractive delta update ($W_t = W_{t-1} + \beta (v_t - W_{t-1} k_t) k_t^\top$), damping residual error before writing.
 
 ---
 
